@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
-import { useRouter, useSearchParams } from "next/navigation";
+import React, { useState } from "react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import supabase from "@/lib/supabase";
 import { Button } from "@/components/ui/button";
@@ -32,7 +32,6 @@ export function RegisterForm() {
   const t = useTranslations();
   const { dir } = useLocale();
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { toast } = useToast();
 
   const [activeTab, setActiveTab] = useState<"client" | "supplier">("client");
@@ -59,13 +58,6 @@ export function RegisterForm() {
     password: "",
     confirmPassword: "",
   });
-
-  useEffect(() => {
-    const type = searchParams.get("type");
-    if (type === "supplier" || type === "client") {
-      setActiveTab(type as "client" | "supplier");
-    }
-  }, [searchParams]);
 
   // التحقق من صحة المدخلات
   const validateEmail = (email: string) =>
@@ -168,7 +160,7 @@ export function RegisterForm() {
     setShowPayment(true);
   };
 
-  // تسجيل العميل بعد "الدفع" (تجريبي الآن) — نعتمد على Auth + metadata فقط
+  // تسجيل العميل بعد "الدفع" (تجريبي الآن)
   const handlePayment = async () => {
     setIsProcessingPayment(true);
     setErrors({});
