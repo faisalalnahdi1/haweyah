@@ -1,9 +1,12 @@
-import { RegisterForm } from "@/components/auth/register-form"
+import { Suspense } from "react";
+import { RegisterForm } from "@/components/auth/register-form";
 
 export default function RegisterPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/10 py-8">
-      <RegisterForm />
+      <Suspense fallback={<div />}>
+        <RegisterForm />
+      </Suspense>
     </div>
-  )
+  );
 }
