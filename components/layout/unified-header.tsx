@@ -1,112 +1,96 @@
-"use client"
+"use client";
 
-import Link from "next/link"
-import { Bell, Home, Menu } from "lucide-react"
-import { Button } from "@/components/ui/button"
-import { Avatar, AvatarFallback } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { useTranslations, useLocale } from "@/contexts/locale-context"
-import { getUserRole } from "@/lib/auth"
-import { useEffect, useState } from "react"
-import { useRouter } from "next/navigation"
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
+import supabase from "@/lib/supabase";
+import { useLocale } from "@/contexts/locale-context";
+import { Button } from "@/components/ui/button";
+import { Menu, LogOut } from "lucide-react";
 
-interface UnifiedHeaderProps {
-  onMenuClick?: () => void
-  role?: "admin" | "supplier" | "client"
-}
+type UnifiedHeaderProps = {
+  role: "client" | "supplier" | "admin";
+  onMenuClick?: () => void;
+};
 
-export function UnifiedHeader({ onMenuClick, role: propRole }: UnifiedHeaderProps) {
-  const t = useTranslations()
-  const { dir } = useLocale()
-  const router = useRouter()
-  const [currentRole, setCurrentRole] = useState<string | null>(null)
+export function UnifiedHeader({ role, onMenuClick }: UnifiedHeaderProps) {
+  const { dir } = useLocale();
+  const router = useRouter();
+  const [name, setName] = useState<string>("...");
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setCurrentRole(propRole || getUserRole())
-  }, [propRole])
+    async function loadUser() {
+      const { data, error } = await supabase.auth.getUser();
+      if (error || !data.user) {
+        router.push("/login");
+        return;
+      }
 
-  const role = currentRole || "client"
+      const meta: any = data.user.user_metadata || {};
+      const fullName = meta.full_name as string | undefined;
+      const fallback =
+        data.user.email?.split("@")[0] ||
+        (dir === "rtl" ? "مستخدم" : "User");
 
-  const homeHref = role === "admin" ? "/dashboard" : role === "supplier" ? "/supplier-dashboard" : "/client-dashboard"
+      setName(fullName || fallback);
+      setLoading(false);
+    }
 
-  const roleLabel = role === "admin" ? t.admin || "أدمن" : role === "supplier" ? t.supplier : t.client
+    loadUser();
+  }, [router, dir]);
+
+  const roleLabel = () => {
+    if (role === "client") {
+      return dir === "rtl" ? "عميل" : "Client";
+    }
+    if (role === "supplier") {
+      return dir === "rtl" ? "مورد" : "Supplier";
+    }
+    if (role === "admin") {
+      return dir === "rtl" ? "أدمن" : "Admin";
+    }
+    return "";
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push("/login");
+  };
 
   return (
-    <header className="sticky top-0 z-40 flex h-14 sm:h-16 items-center justify-between border-b-2 border-border bg-background px-3 sm:px-4 lg:px-6">
-      <div className="flex items-center gap-2 sm:gap-4">
-        {/* Mobile Menu Button */}
+    <header className="flex h-14 items-center justify-between border-b bg-background px-4 lg:px-6">
+      {/* زر القائمة للجوال */}
+      <div className="flex items-center gap-2">
         <Button
           variant="ghost"
           size="icon"
-          className="lg:hidden touch-manipulation"
+          className="lg:hidden"
           onClick={onMenuClick}
-          aria-label={dir === "rtl" ? "فتح القائمة" : "Open menu"}
         >
-          <Menu className="h-5 w-5 sm:h-6 sm:w-6" />
+          <Menu className="h-5 w-5" />
         </Button>
-
-        {/* Home Button - Always visible */}
-        <Link href={homeHref}>
-          <Button
-            variant="ghost"
-            size="icon"
-            title={dir === "rtl" ? "الصفحة الرئيسية" : "Home"}
-            className="touch-manipulation"
-          >
-            <Home className="h-4 w-4 sm:h-5 sm:w-5" />
-          </Button>
-        </Link>
-
-        <div className="hidden xs:block">
-          <h2 className="text-base sm:text-lg font-semibold text-foreground">{t.dashboard || "لوحة التحكم"}</h2>
+        <div>
+          <p className="text-sm font-medium">
+            {loading
+              ? dir === "rtl"
+                ? "جارٍ تحميل الحساب..."
+                : "Loading account..."
+              : name}
+          </p>
+          <p className="text-xs text-muted-foreground">{roleLabel()}</p>
         </div>
       </div>
 
-      <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-4">
-        {/* Notifications */}
-        <Button
-          variant="ghost"
-          size="icon"
-          className="relative touch-manipulation"
-          onClick={() => {
-            const notifHref =
-              role === "admin"
-                ? "/dashboard/notifications"
-                : role === "supplier"
-                  ? "/supplier-dashboard/notifications"
-                  : "/client-dashboard/notifications"
-            router.push(notifHref)
-          }}
-        >
-          <Bell className="h-4 w-4 sm:h-5 sm:w-5" />
-          <Badge
-            variant="destructive"
-            className="absolute -top-0.5 sm:-top-1 -end-0.5 sm:-end-1 h-4 w-4 sm:h-5 sm:w-5 rounded-full p-0 flex items-center justify-center text-[10px] sm:text-xs"
-          >
-            3
-          </Badge>
-        </Button>
-
-        {/* User Profile */}
-        <div className="hidden md:flex items-center gap-2 sm:gap-3">
-          <div className={dir === "rtl" ? "text-start" : "text-end"}>
-            <p className="text-xs sm:text-sm font-medium">{dir === "rtl" ? "أحمد محمد" : "Ahmed Mohammed"}</p>
-            <p className="text-[10px] sm:text-xs text-muted-foreground">{roleLabel}</p>
-          </div>
-          <Avatar className="h-8 w-8 sm:h-10 sm:w-10">
-            <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-xs sm:text-sm">
-              {dir === "rtl" ? "أم" : "AM"}
-            </AvatarFallback>
-          </Avatar>
-        </div>
-
-        {/* Mobile Avatar Only */}
-        <Avatar className="md:hidden h-8 w-8 sm:h-9 sm:w-9">
-          <AvatarFallback className="bg-primary text-primary-foreground font-semibold text-xs">
-            {dir === "rtl" ? "أم" : "AM"}
-          </AvatarFallback>
-        </Avatar>
-      </div>
+      {/* زر تسجيل الخروج */}
+      <Button
+        variant="outline"
+        size="sm"
+        className="gap-1.5 text-xs sm:text-sm"
+        onClick={handleLogout}
+      >
+        <LogOut className="h-4 w-4" />
+        {dir === "rtl" ? "تسجيل الخروج" : "Logout"}
+      </Button>
     </header>
-  )
+  );
 }

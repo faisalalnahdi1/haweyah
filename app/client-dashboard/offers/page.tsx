@@ -1,167 +1,164 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Search, ShoppingCart, Star, Filter } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Tag, Gavel, Filter } from "lucide-react"
 import { useLocale } from "@/contexts/locale-context"
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 
 export default function ClientOffersPage() {
   const { dir } = useLocale()
-  const [searchQuery, setSearchQuery] = useState("")
   const [category, setCategory] = useState("all")
 
-  const offers = [
-    {
-      id: 1,
-      product: "طماطم طازجة",
-      productEn: "Fresh Tomatoes",
-      category: "vegetables",
-      supplier: "مزارع الخير",
-      price: 45,
-      originalPrice: 55,
-      discount: 18,
-      quantity: "500 كجم",
-      rating: 4.5,
-      reviews: 24,
-    },
-    {
-      id: 2,
-      product: "أرز بسمتي",
-      productEn: "Basmati Rice",
-      category: "grains",
-      supplier: "تجار الحبوب",
-      price: 120,
-      originalPrice: 140,
-      discount: 14,
-      quantity: "1 طن",
-      rating: 4.8,
-      reviews: 56,
-    },
-    {
-      id: 3,
-      product: "زيت زيتون",
-      productEn: "Olive Oil",
-      category: "oils",
-      supplier: "زيوت المتوسط",
-      price: 180,
-      originalPrice: 200,
-      discount: 10,
-      quantity: "300 لتر",
-      rating: 4.7,
-      reviews: 38,
-    },
-    {
-      id: 4,
-      product: "بطاطس مصرية",
-      productEn: "Egyptian Potatoes",
-      category: "vegetables",
-      supplier: "مزارع النيل",
-      price: 35,
-      originalPrice: 42,
-      discount: 17,
-      quantity: "800 كجم",
-      rating: 4.3,
-      reviews: 19,
-    },
-    {
-      id: 5,
-      product: "موز فلبيني",
-      productEn: "Philippine Bananas",
-      category: "fruits",
-      supplier: "مستورد الفواكه",
-      price: 55,
-      originalPrice: 65,
-      discount: 15,
-      quantity: "600 كجم",
-      rating: 4.6,
-      reviews: 42,
-    },
-    {
-      id: 6,
-      product: "سكر أبيض",
-      productEn: "White Sugar",
-      category: "grains",
-      supplier: "مصفاة السكر",
-      price: 95,
-      originalPrice: 110,
-      discount: 14,
-      quantity: "1.5 طن",
-      rating: 4.4,
-      reviews: 31,
-    },
-  ]
+  const categories = ["الكل", "أرز", "حليب", "منظفات", "مجمدات"]
 
   return (
     <div className="space-y-6">
+      {/* العنوان الرئيسي */}
       <div>
-        <h1 className="text-3xl font-bold">{dir === "rtl" ? "تصفح العروض" : "Browse Offers"}</h1>
-        <p className="text-muted-foreground">
-          {dir === "rtl" ? "اكتشف أفضل العروض من موردينا" : "Discover the best offers from our suppliers"}
+        <h1 className="text-xl sm:text-2xl font-bold">
+          {dir === "rtl"
+            ? "تصفح العروض الخاصة والمزادات"
+            : "Browse Special Offers & Auctions"}
+        </h1>
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+          {dir === "rtl"
+            ? "استعرض جميع العروض والمزادات في سوق الجملة، الواجهة فقط لعرض الشكل حالياً بدون بيانات حقيقية."
+            : "Explore all special offers and auctions in the wholesale market. This is a UI-only view for now without real data."}
         </p>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-4">
-        <div className="relative flex-1">
-          <Search className="absolute start-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder={dir === "rtl" ? "البحث عن منتج..." : "Search products..."}
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="ps-10"
-          />
+      {/* الفلاتر بالأقسام */}
+      <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 items-stretch sm:items-center">
+        <div className="flex flex-wrap gap-2 flex-1">
+          {categories.map((cat, idx) => (
+            <Badge
+              key={cat}
+              variant={idx === 0 ? "default" : "outline"}
+              className="cursor-default"
+            >
+              {cat}
+            </Badge>
+          ))}
         </div>
-        <Select value={category} onValueChange={setCategory}>
-          <SelectTrigger className="w-full sm:w-48">
-            <Filter className="h-4 w-4 me-2" />
-            <SelectValue />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">{dir === "rtl" ? "جميع الفئات" : "All Categories"}</SelectItem>
-            <SelectItem value="vegetables">{dir === "rtl" ? "خضروات" : "Vegetables"}</SelectItem>
-            <SelectItem value="fruits">{dir === "rtl" ? "فواكه" : "Fruits"}</SelectItem>
-            <SelectItem value="grains">{dir === "rtl" ? "حبوب" : "Grains"}</SelectItem>
-            <SelectItem value="oils">{dir === "rtl" ? "زيوت" : "Oils"}</SelectItem>
-          </SelectContent>
-        </Select>
+        <div className="w-full sm:w-56">
+          <Select value={category} onValueChange={setCategory}>
+            <SelectTrigger className="w-full">
+              <Filter className="h-4 w-4 me-2" />
+              <SelectValue
+                placeholder={
+                  dir === "rtl" ? "تصفية حسب القسم" : "Filter by category"
+                }
+              />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">
+                {dir === "rtl" ? "جميع الأقسام" : "All categories"}
+              </SelectItem>
+              <SelectItem value="rice">
+                {dir === "rtl" ? "أرز" : "Rice"}
+              </SelectItem>
+              <SelectItem value="milk">
+                {dir === "rtl" ? "حليب" : "Milk"}
+              </SelectItem>
+              <SelectItem value="cleaning">
+                {dir === "rtl" ? "منظفات" : "Cleaning"}
+              </SelectItem>
+              <SelectItem value="frozen">
+                {dir === "rtl" ? "مجمدات" : "Frozen"}
+              </SelectItem>
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
-      <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {offers.map((offer) => (
-          <Card key={offer.id} className="hover:shadow-lg transition-shadow">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between mb-2">
-                <Badge variant="destructive" className="text-xs">
-                  -{offer.discount}%
-                </Badge>
-                <div className="flex items-center gap-1">
-                  <Star className="h-4 w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="text-sm font-medium">{offer.rating}</span>
-                  <span className="text-xs text-muted-foreground">({offer.reviews})</span>
+      {/* قسم العروض الخاصة والمزادات مقسّم إلى جزأين */}
+      <div className="grid gap-4 md:grid-cols-2">
+        {/* العروض الخاصة */}
+        <Card className="bg-card/80">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Tag className="h-5 w-5 text-primary" />
+              {dir === "rtl" ? "العروض الخاصة" : "Special Offers"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-xs sm:text-sm text-muted-foreground">
+            <p>
+              {dir === "rtl"
+                ? "هنا ستظهر العروض الخاصة من الموردين بأسعار الجملة، مع اسم المنتج، المورد، والسعر الخاص. حالياً لا توجد بيانات حقيقية وسيتم الربط بقاعدة البيانات لاحقاً."
+                : "Here you will see special offers from suppliers with wholesale prices, product name, supplier, and special price. Currently there is no live data; database integration will be added later."}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-lg border bg-background overflow-hidden flex flex-col"
+                >
+                  <div className="w-full h-16 bg-muted flex items-center justify-center text-[10px] sm:text-xs text-muted-foreground">
+                    {dir === "rtl" ? "صورة منتج" : "Product image"}
+                  </div>
+                  <div className="p-2.5 space-y-1">
+                    <div className="h-3 w-20 bg-muted rounded-sm" />
+                    <div className="h-2.5 w-16 bg-muted rounded-sm" />
+                    <div className="h-2.5 w-14 bg-muted rounded-sm" />
+                  </div>
                 </div>
-              </div>
-              <CardTitle className="text-lg">{dir === "rtl" ? offer.product : offer.productEn}</CardTitle>
-              <p className="text-sm text-muted-foreground">{offer.supplier}</p>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div>
-                <div className="flex items-baseline gap-2 mb-1">
-                  <span className="text-2xl font-bold text-primary">{offer.price}</span>
-                  <span className="text-sm text-muted-foreground line-through">{offer.originalPrice}</span>
-                  <span className="text-sm">{dir === "rtl" ? "ر.س" : "SAR"}</span>
+              ))}
+            </div>
+            <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-[11px] sm:text-xs">
+              {dir === "rtl"
+                ? "لا توجد عروض خاصة فعلية حتى الآن، ستظهر العروض تلقائياً فور إضافتها من الموردين."
+                : "There are no real special offers yet. They will appear automatically once suppliers add them."}
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* المزادات */}
+        <Card className="bg-card/80">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+              <Gavel className="h-5 w-5 text-primary" />
+              {dir === "rtl" ? "المزادات" : "Auctions"}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-xs sm:text-sm text-muted-foreground">
+            <p>
+              {dir === "rtl"
+                ? "هنا ستظهر مزادات الكميات الكبيرة مع حالة المزاد (حي، قادم، منتهي) وسعر البداية. حالياً نعرض شكل الواجهة فقط كعرض للمسرّعة."
+                : "Here you will see auctions for bulk quantities with status (live, upcoming, ended) and starting price. Currently this is a UI-only view for demo purposes."}
+            </p>
+            <div className="grid grid-cols-2 gap-2">
+              {[1, 2, 3, 4].map((i) => (
+                <div
+                  key={i}
+                  className="rounded-lg border bg-background overflow-hidden flex flex-col"
+                >
+                  <div className="w-full h-16 bg-muted flex items-center justify-center text-[10px] sm:text-xs text-muted-foreground">
+                    {dir === "rtl" ? "صورة للمزاد" : "Auction image"}
+                  </div>
+                  <div className="p-2.5 space-y-1">
+                    <div className="h-3 w-20 bg-muted rounded-sm" />
+                    <div className="h-2.5 w-16 bg-muted rounded-sm" />
+                    <div className="h-2.5 w-14 bg-muted rounded-sm" />
+                  </div>
                 </div>
-                <p className="text-sm text-muted-foreground">{offer.quantity}</p>
-              </div>
-              <Button className="w-full gap-2">
-                <ShoppingCart className="h-4 w-4" />
-                {dir === "rtl" ? "أضف للسلة" : "Add to Cart"}
-              </Button>
-            </CardContent>
-          </Card>
-        ))}
+              ))}
+            </div>
+            <div className="rounded-md border border-dashed bg-muted/40 px-3 py-2 text-[11px] sm:text-xs">
+              {dir === "rtl"
+                ? "لا توجد مزادات نشطة حالياً، سيتم عرض المزادات هنا فور إنشائها من الموردين."
+                : "There are no active auctions yet. They will appear here as soon as suppliers create them."}
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

@@ -1,106 +1,146 @@
-"use client"
+"use client";
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Star, Package } from "lucide-react"
-import { useLocale } from "@/contexts/locale-context"
-import Link from "next/link"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import supabase from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { Tag } from "lucide-react";
+import { useLocale } from "@/contexts/locale-context";
 
-export function FeaturedOffers() {
-  const { dir } = useLocale()
+type Offer = {
+  id: number;
+  title_ar: string | null;
+  title_en: string | null;
+  price: number | null;
+};
 
-  // Mock featured offers (would be set by admin in real app)
-  const offers = [
-    {
-      id: 1,
-      product: dir === "rtl" ? "أرز بسمتي هندي" : "Indian Basmati Rice",
-      supplier: dir === "rtl" ? "مؤسسة الحبوب الذهبية" : "Golden Grains Est.",
-      price: "85 ر.س/كيس",
-      originalPrice: "120 ر.س/كيس",
-      discount: "-29%",
-      rating: 4.8,
-      image: "/basmati-rice-bags.jpg",
-    },
-    {
-      id: 2,
-      product: dir === "rtl" ? "زيت زيتون بكر" : "Extra Virgin Olive Oil",
-      supplier: dir === "rtl" ? "شركة الزيوت الطبيعية" : "Natural Oils Co.",
-      price: "45 ر.س/لتر",
-      originalPrice: "65 ر.س/لتر",
-      discount: "-31%",
-      rating: 4.9,
-      image: "/olive-oil-bottles.png",
-    },
-    {
-      id: 3,
-      product: dir === "rtl" ? "تمور مجدول فاخرة" : "Premium Medjool Dates",
-      supplier: dir === "rtl" ? "مزارع النخيل" : "Palm Farms",
-      price: "120 ر.س/كرتون",
-      originalPrice: "180 ر.س/كرتون",
-      discount: "-33%",
-      rating: 5.0,
-      image: "/medjool-dates-box.jpg",
-    },
-  ]
+export function FeaturedOffersHome() {
+  const { dir } = useLocale();
+  const [offers, setOffers] = useState<Offer[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    async function loadOffers() {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from("offers")
+          .select("id, title_ar, title_en, price")
+          .eq("is_active", true)
+          .limit(6);
+
+        if (error) {
+          console.log("FEATURED_OFFERS_ERROR", error);
+          setError(
+            dir === "rtl"
+              ? "تعذّر تحميل العروض حالياً."
+              : "Failed to load offers."
+          );
+          setOffers([]);
+        } else {
+          setOffers(data || []);
+        }
+      } catch (err) {
+        console.log("FEATURED_OFFERS_FATAL", err);
+        setError(
+          dir === "rtl"
+            ? "حدث خطأ غير متوقع أثناء تحميل العروض."
+            : "Unexpected error while loading offers."
+        );
+        setOffers([]);
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    loadOffers();
+  }, [dir]);
 
   return (
-    <section className="container mx-auto px-4 py-12 sm:py-16 bg-background/50">
-      <div className="text-center mb-8 sm:mb-10">
-        <h2 className="text-2xl sm:text-3xl font-bold mb-2 sm:mb-3">
-          {dir === "rtl" ? "عروض مميزة" : "Featured Offers"}
-        </h2>
-        <p className="text-sm sm:text-base text-muted-foreground">
-          {dir === "rtl" ? "عروض مختارة بعناية من قبل فريقنا" : "Carefully curated offers by our team"}
-        </p>
-      </div>
-
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 sm:mb-8">
-        {offers.map((offer) => (
-          <Card key={offer.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-            <div className="relative">
-              <img
-                src={offer.image || "/placeholder.svg"}
-                alt={offer.product}
-                className="w-full h-40 sm:h-48 object-cover"
-              />
-              <Badge className="absolute top-2 sm:top-3 end-2 sm:end-3 bg-destructive text-destructive-foreground text-xs sm:text-sm">
-                {offer.discount}
-              </Badge>
-            </div>
-            <CardContent className="p-4 sm:p-5">
-              <div className="flex items-start justify-between mb-2 gap-2">
-                <h3 className="font-bold text-base sm:text-lg line-clamp-1">{offer.product}</h3>
-                <div className="flex items-center gap-1 text-xs sm:text-sm shrink-0">
-                  <Star className="h-3.5 w-3.5 sm:h-4 sm:w-4 fill-yellow-400 text-yellow-400" />
-                  <span className="font-medium">{offer.rating}</span>
-                </div>
-              </div>
-              <p className="text-xs sm:text-sm text-muted-foreground mb-3 flex items-center gap-1">
-                <Package className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
-                <span className="truncate">{offer.supplier}</span>
-              </p>
-              <div className="flex items-center gap-2 mb-3 sm:mb-4">
-                <span className="text-xl sm:text-2xl font-bold text-primary">{offer.price}</span>
-                <span className="text-xs sm:text-sm text-muted-foreground line-through">{offer.originalPrice}</span>
-              </div>
-              <Link href="/browse">
-                <Button className="w-full text-sm sm:text-base h-9 sm:h-10">
-                  {dir === "rtl" ? "عرض التفاصيل" : "View Details"}
-                </Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="text-center">
+    <section className="container mx-auto px-4 pb-10 sm:pb-12 lg:pb-14">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h3 className="text-2xl font-bold flex items-center gap-2">
+          <Tag className="h-5 w-5 text-primary" />
+          {dir === "rtl" ? "العروض الخاصة" : "Featured Offers"}
+        </h3>
         <Link href="/browse">
-          <Button variant="outline" size="lg" className="w-full xs:w-auto bg-transparent">
-            {dir === "rtl" ? "تصفح جميع العروض" : "Browse All Offers"}
+          <Button variant="ghost" className="text-sm">
+            {dir === "rtl" ? "تصفّح العروض" : "Browse offers"}
           </Button>
         </Link>
       </div>
+
+      <p className="text-sm sm:text-base text-muted-foreground mb-4">
+        {dir === "rtl"
+          ? "استكشف شكل العروض الخاصة كما ستظهر في المنصة. البيانات الفعلية تُعرض تلقائياً عند إضافتها من الموردين."
+          : "See how special offers will look in the platform. Real data will appear automatically when suppliers add offers."}
+      </p>
+
+      {loading ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="rounded-lg border bg-card overflow-hidden flex flex-col animate-pulse"
+            >
+              <div className="w-full h-32 sm:h-40 bg-muted" />
+              <div className="p-4 space-y-2 flex-1 flex flex-col">
+                <div className="h-4 w-24 bg-muted rounded-sm" />
+                <div className="h-3 w-32 bg-muted rounded-sm" />
+                <div className="h-3 w-20 bg-muted rounded-sm mb-2" />
+                <div className="mt-auto h-9 w-24 bg-muted rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : offers.length === 0 ? (
+        <div className="rounded-lg border bg-card p-6 text-center text-sm sm:text-base text-muted-foreground">
+          {dir === "rtl"
+            ? "لا توجد عروض خاصة متاحة حالياً. ستظهر العروض هنا فور إضافتها من الموردين."
+            : "There are no special offers available right now. Offers will appear here as soon as suppliers add them."}
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {offers.map((offer) => (
+            <div
+              key={offer.id}
+              className="rounded-lg border bg-card overflow-hidden flex flex-col"
+            >
+              <div className="w-full h-32 sm:h-40 bg-muted flex items-center justify-center text-muted-foreground text-sm">
+                {dir === "rtl" ? "صورة منتج" : "Product image"}
+              </div>
+              <div className="p-4 space-y-2 flex-1 flex flex-col">
+                <h4 className="font-semibold text-base sm:text-lg">
+                  {dir === "rtl"
+                    ? offer.title_ar || "عرض بدون عنوان"
+                    : offer.title_en || offer.title_ar || "Untitled offer"}
+                </h4>
+                {offer.price !== null && (
+                  <p className="text-sm text-primary font-semibold">
+                    {dir === "rtl"
+                      ? `${offer.price.toLocaleString()} ر.س`
+                      : `${offer.price.toLocaleString()} SAR`}
+                  </p>
+                )}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-auto"
+                  asChild
+                >
+                  <Link href="/browse">
+                    {dir === "rtl" ? "تصفّح" : "Browse"}
+                  </Link>
+                </Button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
-  )
+  );
 }

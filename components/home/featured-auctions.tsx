@@ -1,124 +1,156 @@
-"use client"
+"use client";
 
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Gavel, Clock, TrendingUp } from "lucide-react"
-import { useLocale } from "@/contexts/locale-context"
-import Link from "next/link"
-import { useState, useEffect } from "react"
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import supabase from "@/lib/supabase";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Gavel } from "lucide-react";
+import { useLocale } from "@/contexts/locale-context";
 
-export function FeaturedAuctions() {
-  const { dir } = useLocale()
-  const [, setTime] = useState(Date.now())
+type Auction = {
+  id: number;
+  title_ar: string | null;
+  title_en: string | null;
+  status: string | null;
+};
+
+export function FeaturedAuctionsHome() {
+  const { dir } = useLocale();
+  const [auctions, setAuctions] = useState<Auction[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    const interval = setInterval(() => setTime(Date.now()), 1000)
-    return () => clearInterval(interval)
-  }, [])
+    async function loadAuctions() {
+      setLoading(true);
+      setError(null);
+      try {
+        const { data, error } = await supabase
+          .from("auctions")
+          .select("id, title_ar, title_en, status")
+          .in("status", ["live", "upcoming"])
+          .limit(6);
 
-  // Mock featured auctions (would be set by admin in real app)
-  const auctions = [
-    {
-      id: 1,
-      product: dir === "rtl" ? "دقيق فاخر (500 كيس)" : "Premium Flour (500 bags)",
-      currentBid: "12,500 ر.س",
-      startingPrice: "10,000 ر.س",
-      bids: 23,
-      endsAt: new Date(Date.now() + 2 * 60 * 60 * 1000), // 2 hours from now
-      image: "/flour-bags-warehouse.jpg",
-    },
-    {
-      id: 2,
-      product: dir === "rtl" ? "سكر أبيض (1 طن)" : "White Sugar (1 ton)",
-      currentBid: "3,200 ر.س",
-      startingPrice: "2,500 ر.س",
-      bids: 18,
-      endsAt: new Date(Date.now() + 5 * 60 * 60 * 1000), // 5 hours from now
-      image: "/sugar-bags.jpg",
-    },
-  ]
+        if (error) {
+          console.log("FEATURED_AUCTIONS_ERROR", error);
+          setError(
+            dir === "rtl"
+              ? "تعذّر تحميل المزادات حالياً."
+              : "Failed to load auctions."
+          );
+          setAuctions([]);
+        } else {
+          setAuctions(data || []);
+        }
+      } catch (err) {
+        console.log("FEATURED_AUCTIONS_FATAL", err);
+        setError(
+          dir === "rtl"
+            ? "حدث خطأ غير متوقع أثناء تحميل المزادات."
+            : "Unexpected error while loading auctions."
+        );
+        setAuctions([]);
+      } finally {
+        setLoading(false);
+      }
+    }
 
-  const getTimeRemaining = (endDate: Date) => {
-    const total = endDate.getTime() - Date.now()
-    const hours = Math.floor(total / (1000 * 60 * 60))
-    const minutes = Math.floor((total % (1000 * 60 * 60)) / (1000 * 60))
-    const seconds = Math.floor((total % (1000 * 60)) / 1000)
+    loadAuctions();
+  }, [dir]);
 
-    if (total <= 0) return dir === "rtl" ? "انتهى" : "Ended"
-    return `${hours.toString().padStart(2, "0")}:${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`
-  }
+  const statusLabel = (status: string | null) => {
+    if (!status) return dir === "rtl" ? "غير محدد" : "Unknown";
+    if (status === "live")
+      return dir === "rtl" ? "مزاد حي" : "Live auction";
+    if (status === "upcoming")
+      return dir === "rtl" ? "قادِم" : "Upcoming";
+    if (status === "ended") return dir === "rtl" ? "منتهي" : "Ended";
+    return status;
+  };
 
   return (
-    <section className="container mx-auto px-4 py-16">
-      <div className="text-center mb-10">
-        <h2 className="text-3xl font-bold mb-3">{dir === "rtl" ? "مزادات نشطة" : "Active Auctions"}</h2>
-        <p className="text-muted-foreground">
-          {dir === "rtl" ? "شارك الآن في المزادات الساخنة" : "Join the hottest auctions now"}
-        </p>
-      </div>
-
-      <div className="grid md:grid-cols-2 gap-6 mb-8 max-w-4xl mx-auto">
-        {auctions.map((auction) => (
-          <Card key={auction.id} className="overflow-hidden hover:shadow-lg transition-shadow">
-            <div className="relative">
-              <img
-                src={auction.image || "/placeholder.svg"}
-                alt={auction.product}
-                className="w-full h-48 object-cover"
-              />
-              <Badge className="absolute top-3 end-3 bg-primary text-primary-foreground flex items-center gap-1">
-                <Gavel className="h-3 w-3" />
-                {dir === "rtl" ? "مزاد حي" : "Live Auction"}
-              </Badge>
-            </div>
-            <CardContent className="p-5">
-              <h3 className="font-bold text-lg mb-3">{auction.product}</h3>
-
-              <div className="space-y-3 mb-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground">
-                    {dir === "rtl" ? "العرض الحالي" : "Current Bid"}
-                  </span>
-                  <span className="text-xl font-bold text-primary">{auction.currentBid}</span>
-                </div>
-
-                <div className="flex items-center justify-between text-sm">
-                  <span className="text-muted-foreground">{dir === "rtl" ? "السعر الابتدائي" : "Starting Price"}</span>
-                  <span>{auction.startingPrice}</span>
-                </div>
-
-                <div className="flex items-center justify-between">
-                  <span className="text-sm text-muted-foreground flex items-center gap-1">
-                    <Clock className="h-4 w-4" />
-                    {dir === "rtl" ? "ينتهي في" : "Ends in"}
-                  </span>
-                  <span className="font-mono font-bold text-destructive">{getTimeRemaining(auction.endsAt)}</span>
-                </div>
-
-                <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                  <TrendingUp className="h-4 w-4" />
-                  <span>
-                    {auction.bids} {dir === "rtl" ? "عرض سعر" : "bids"}
-                  </span>
-                </div>
-              </div>
-
-              <Link href="/browse">
-                <Button className="w-full">{dir === "rtl" ? "عرض المزاد" : "View Auction"}</Button>
-              </Link>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <div className="text-center">
+    <section className="container mx-auto px-4 pb-12 sm:pb-16 lg:pb-20">
+      <div className="flex items-center justify-between mb-4 sm:mb-6">
+        <h3 className="text-2xl font-bold flex items-center gap-2">
+          <Gavel className="h-5 w-5 text-primary" />
+          {dir === "rtl" ? "المزادات" : "Auctions"}
+        </h3>
         <Link href="/browse">
-          <Button variant="outline" size="lg">
-            {dir === "rtl" ? "تصفح جميع المزادات" : "Browse All Auctions"}
+          <Button variant="ghost" className="text-sm">
+            {dir === "rtl" ? "تصفّح المزادات" : "Browse auctions"}
           </Button>
         </Link>
       </div>
+
+      <p className="text-sm sm:text-base text-muted-foreground mb-4">
+        {dir === "rtl"
+          ? "هنا ستظهر المزادات الحقيقية للموردين. حالياً نعرض البيانات المتوفرة من Supabase أو حالة عدم وجود مزادات."
+          : "This section shows real supplier auctions from Supabase, or an empty state if none exist yet."}
+      </p>
+
+      {loading ? (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1, 2, 3].map((i) => (
+            <div
+              key={i}
+              className="rounded-lg border bg-card overflow-hidden flex flex-col animate-pulse"
+            >
+              <div className="w-full h-32 sm:h-40 bg-muted" />
+              <div className="p-4 space-y-2 flex-1 flex flex-col">
+                <div className="h-4 w-28 bg-muted rounded-sm mb-1" />
+                <div className="h-3 w-36 bg-muted rounded-sm mb-2" />
+                <div className="h-3 w-24 bg-muted rounded-sm mb-4" />
+                <div className="mt-auto h-9 w-28 bg-muted rounded-md" />
+              </div>
+            </div>
+          ))}
+        </div>
+      ) : error ? (
+        <p className="text-sm text-destructive">{error}</p>
+      ) : auctions.length === 0 ? (
+        <div className="rounded-lg border bg-card p-6 text-center text-sm sm:text-base text-muted-foreground">
+          {dir === "rtl"
+            ? "لا توجد مزادات نشطة حالياً. ستظهر المزادات هنا فور إنشائها من الموردين."
+            : "There are no active auctions right now. Auctions will appear here as soon as suppliers create them."}
+        </div>
+      ) : (
+        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {auctions.map((auction) => (
+            <Card
+              key={auction.id}
+              className="overflow-hidden hover:shadow-lg transition-shadow flex flex-col"
+            >
+              <div className="w-full h-32 sm:h-40 bg-muted flex items-center justify-center text-muted-foreground text-sm">
+                {dir === "rtl" ? "صورة منتج للمزاد" : "Auction product image"}
+              </div>
+              <CardContent className="p-4 flex-1 flex flex-col space-y-2">
+                <h4 className="font-semibold text-base sm:text-lg">
+                  {dir === "rtl"
+                    ? auction.title_ar || "مزاد بدون عنوان"
+                    : auction.title_en ||
+                      auction.title_ar ||
+                      "Untitled auction"}
+                </h4>
+                <Badge className="w-fit">
+                  {statusLabel(auction.status)}
+                </Badge>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="mt-auto"
+                  asChild
+                >
+                  <Link href="/browse">
+                    {dir === "rtl" ? "تصفّح المزاد" : "View auction"}
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
     </section>
-  )
+  );
 }

@@ -18,6 +18,8 @@ import {
   History,
   Home,
   Menu,
+  Store,
+  Tag,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
@@ -25,10 +27,10 @@ import { ScrollArea } from "@/components/ui/scroll-area"
 import { Separator } from "@/components/ui/separator"
 import { useTranslations, useLocale } from "@/contexts/locale-context"
 import { LanguageToggle } from "@/components/language-toggle"
-import { logout, getUserRole } from "@/lib/auth"
 import { useToast } from "@/hooks/use-toast"
 import { useState, useEffect } from "react"
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet"
+import supabase from "@/lib/supabase"
 
 interface UnifiedSidebarProps {
   role?: "admin" | "supplier" | "client"
@@ -43,10 +45,12 @@ export function UnifiedSidebar({ role: propRole, open, onOpenChange }: UnifiedSi
   const { dir } = useLocale()
   const { toast } = useToast()
   const [isMobileOpen, setIsMobileOpen] = useState(false)
-  const [currentRole, setCurrentRole] = useState<string | null>(null)
+  const [currentRole, setCurrentRole] = useState<"admin" | "supplier" | "client">("client")
 
   useEffect(() => {
-    setCurrentRole(propRole || getUserRole())
+    if (propRole) {
+      setCurrentRole(propRole)
+    }
   }, [propRole])
 
   useEffect(() => {
@@ -60,46 +64,95 @@ export function UnifiedSidebar({ role: propRole, open, onOpenChange }: UnifiedSi
     onOpenChange?.(newOpen)
   }
 
-  const role = currentRole || "client"
+  const role = currentRole
 
-  // Admin navigation
+  // Admin navigation – حالياً عنصر واحد يودّي للوحة الأدمن القديمة /dashboard
   const adminNavigation = [
-    { name: t.dashboard || "لوحة التحكم", href: "/dashboard", icon: LayoutDashboard },
-    { name: t.users || "المستخدمين", href: "/dashboard/users", icon: Users },
-    { name: t.offers || "العروض", href: "/dashboard/offers", icon: Package },
-    { name: t.auctions || "المزادات", href: "/dashboard/auctions", icon: Gavel },
-    { name: t.orders || "الطلبات", href: "/dashboard/orders", icon: ShoppingCart },
-    { name: t.analytics || "التحليلات", href: "/dashboard/analytics", icon: BarChart3 },
-    { name: t.notifications || "الإشعارات", href: "/dashboard/notifications", icon: Bell },
-    { name: t.settings || "الإعدادات", href: "/dashboard/settings", icon: Settings },
+    {
+      name: t.dashboard || "لوحة التحكم",
+      href: "/dashboard",
+      icon: LayoutDashboard,
+    },
+    // لما تضيف صفحات إدارة مستخدمين/موردين للأدمن، زِد عناصر هنا بمسارات حقيقية
+    // { name: t.users || "المستخدمين", href: "/dashboard/users", icon: Users },
   ]
 
-  // Supplier navigation
+  // Supplier navigation (مركّزة على المنتجات اليومية + العروض/المزادات)
   const supplierNavigation = [
-    { name: dir === "rtl" ? "الرئيسية" : "Dashboard", href: "/supplier-dashboard", icon: Home },
-    { name: dir === "rtl" ? "منتجاتي" : "My Products", href: "/supplier-dashboard/products", icon: ShoppingBag },
-    { name: dir === "rtl" ? "عروضي" : "My Offers", href: "/supplier-dashboard/offers", icon: Package },
-    { name: dir === "rtl" ? "مزاداتي" : "My Auctions", href: "/supplier-dashboard/auctions", icon: Gavel },
-    { name: dir === "rtl" ? "الطلبات" : "Orders", href: "/supplier-dashboard/orders", icon: ClipboardList },
-    { name: t.notifications || "الإشعارات", href: "/supplier-dashboard/notifications", icon: Bell },
-    { name: t.settings || "الإعدادات", href: "/supplier-dashboard/settings", icon: Settings },
+    {
+      name: dir === "rtl" ? "المنتجات اليومية" : "Daily Products",
+      href: "/supplier-dashboard",
+      icon: Package,
+    },
+    {
+      name: dir === "rtl" ? "العروض والمزادات" : "Offers & Auctions",
+      href: "/supplier-dashboard/offers",
+      icon: Tag,
+    },
+    {
+      name: dir === "rtl" ? "الطلبات" : "Orders",
+      href: "/supplier-dashboard/orders",
+      icon: ClipboardList,
+    },
+    {
+      name: dir === "rtl" ? "السجل" : "History",
+      href: "/supplier-dashboard/history",
+      icon: History,
+    },
+    {
+      name: t.notifications || "الإشعارات",
+      href: "/supplier-dashboard/notifications",
+      icon: Bell,
+    },
+    {
+      name: t.settings || "الإعدادات",
+      href: "/supplier-dashboard/settings",
+      icon: Settings,
+    },
   ]
 
-  // Client navigation
+  // Client navigation (الموردون والمنتجات اليومية + العروض والمزادات)
   const clientNavigation = [
-    { name: dir === "rtl" ? "الرئيسية" : "Dashboard", href: "/client-dashboard", icon: Home },
-    { name: dir === "rtl" ? "تصفح العروض" : "Browse Offers", href: "/client-dashboard/offers", icon: ShoppingBag },
-    { name: dir === "rtl" ? "المزادات" : "Auctions", href: "/client-dashboard/auctions", icon: Gavel },
-    { name: dir === "rtl" ? "طلباتي" : "My Orders", href: "/client-dashboard/orders", icon: Package },
-    { name: dir === "rtl" ? "السجل" : "History", href: "/client-dashboard/history", icon: History },
-    { name: t.notifications || "الإشعارات", href: "/client-dashboard/notifications", icon: Bell },
-    { name: t.settings || "الإعدادات", href: "/client-dashboard/settings", icon: Settings },
+    {
+      name:
+        dir === "rtl"
+          ? "الموردون والمنتجات اليومية"
+          : "Suppliers & Daily Products",
+      href: "/client-dashboard",
+      icon: Store,
+    },
+    {
+      name: dir === "rtl" ? "العروض والمزادات" : "Offers & Auctions",
+      href: "/client-dashboard/offers",
+      icon: Tag,
+    },
+    {
+      name: dir === "rtl" ? "طلباتي" : "My Orders",
+      href: "/client-dashboard/orders",
+      icon: ShoppingCart,
+    },
+    {
+      name: dir === "rtl" ? "السجل" : "History",
+      href: "/client-dashboard/history",
+      icon: History,
+    },
+    {
+      name: t.notifications || "الإشعارات",
+      href: "/client-dashboard/notifications",
+      icon: Bell,
+    },
+    {
+      name: t.settings || "الإعدادات",
+      href: "/client-dashboard/settings",
+      icon: Settings,
+    },
   ]
 
-  const navigation = role === "admin" ? adminNavigation : role === "supplier" ? supplierNavigation : clientNavigation
+  const navigation =
+    role === "admin" ? adminNavigation : role === "supplier" ? supplierNavigation : clientNavigation
 
-  const handleLogout = () => {
-    logout()
+  const handleLogout = async () => {
+    await supabase.auth.signOut()
     toast({
       title: dir === "rtl" ? "تم تسجيل الخروج" : "Logged Out",
       description: dir === "rtl" ? "تم تسجيل خروجك بنجاح" : "You have been logged out successfully",
@@ -108,7 +161,16 @@ export function UnifiedSidebar({ role: propRole, open, onOpenChange }: UnifiedSi
     handleOpenChange(false)
   }
 
-  const roleLabel = role === "admin" ? t.admin || "أدمن" : role === "supplier" ? t.supplier : t.client
+  const roleLabel =
+    role === "admin"
+      ? t.admin || "أدمن"
+      : role === "supplier"
+      ? dir === "rtl"
+        ? "مورد"
+        : "Supplier"
+      : dir === "rtl"
+      ? "عميل"
+      : "Client"
 
   const SidebarContent = () => (
     <div className="flex h-full w-full flex-col bg-sidebar">

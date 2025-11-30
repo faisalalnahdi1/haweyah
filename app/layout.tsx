@@ -3,6 +3,7 @@ import type { Metadata } from "next"
 import { Noto_Sans_Arabic, Geist_Mono } from "next/font/google"
 import { Analytics } from "@vercel/analytics/next"
 import { LocaleProvider } from "@/contexts/locale-context"
+import { Toaster } from "@/components/ui/toaster" // ⬅️ إضافة الـ Toaster
 import "./globals.css"
 
 // <CHANGE> Using Noto Sans Arabic for better Arabic support
@@ -13,8 +14,8 @@ const notoSansArabic = Noto_Sans_Arabic({
 const _geistMono = Geist_Mono({ subsets: ["latin"] })
 
 export const metadata: Metadata = {
-  title: "حاوية | Haawiya - B2B Food Wholesale Platform",
-  description: "Enterprise B2B platform for food wholesale, auction trading, and vendor management",
+  title: "حاوية - منصة الجملة",
+  description: "منصة لربط الموردين بعملاء الجملة.",
   generator: "v0.app",
   icons: {
     icon: [
@@ -45,6 +46,7 @@ export default function RootLayout({
       <body className={`${notoSansArabic.className} font-sans antialiased`}>
         <LocaleProvider>{children}</LocaleProvider>
         <Analytics />
+        <Toaster /> {/* هنا تُعرض كل التوستات من useToast() */}
       </body>
     </html>
   )

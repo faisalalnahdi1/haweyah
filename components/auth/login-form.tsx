@@ -7,7 +7,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { LanguageToggle } from "@/components/language-toggle";
 import { useTranslations, useLocale } from "@/contexts/locale-context";
 import { Package, ArrowRight, Home } from "lucide-react";
@@ -32,9 +38,10 @@ export function LoginForm() {
     if (!email || !password) {
       toast({
         title: dir === "rtl" ? "خطأ" : "Error",
-        description: dir === "rtl"
-          ? "يرجى إدخال البريد الإلكتروني وكلمة المرور"
-          : "Please enter email and password",
+        description:
+          dir === "rtl"
+            ? "يرجى إدخال البريد الإلكتروني وكلمة المرور"
+            : "Please enter email and password",
         variant: "destructive",
       });
       return;
@@ -42,21 +49,91 @@ export function LoginForm() {
 
     setLoading(true);
 
-    // تسجيل الدخول الفعلي مع قاعدة البيانات (Supabase / Bolt Database)
-    const { data, error } = await supabase.auth.signInWithPassword({
+    // 1) تسجيل الدخول من Supabase Auth
+    const {
+      data: authData,
+      error: authError,
+    } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
-    setLoading(false);
+    console.log("LOGIN_AUTH_ERROR", authError, authData);
 
-    if (error) {
+    if (authError || !authData.user) {
+      setLoading(false);
+
+      let messageAr = "فشل تسجيل الدخول، يرجى التحقق من البيانات";
+      let messageEn = "Login failed, please check your credentials";
+
+      const raw = authError?.message?.toLowerCase() ?? "";
+
+      if (raw.includes("email not confirmed")) {
+        messageAr =
+          "البريد الإلكتروني غير مُفعل، يرجى تأكيد بريدك قبل تسجيل الدخول.";
+        messageEn =
+          "Email not confirmed, please verify your email before logging in.";
+      } else if (
+        raw.includes("invalid login credentials") ||
+        authError?.status === 400
+      ) {
+        messageAr = "البريد الإلكتروني أو كلمة المرور غير صحيحة.";
+        messageEn = "Invalid email or password.";
+      }
+
       toast({
         title: dir === "rtl" ? "خطأ" : "Error",
-        description: dir === "rtl" ? error.message : error.message,
+        description: dir === "rtl" ? messageAr : messageEn,
         variant: "destructive",
       });
       return;
+    }
+
+    const user = authData.user;
+
+    // 2) قراءة الدور من user_metadata في Supabase
+    const metadata: any = user.user_metadata || {};
+    const role = metadata.role as "admin" | "supplier" | "client" | undefined;
+    const isActive = metadata.is_active ?? true;
+
+    if (!role) {
+      toast({
+        title: dir === "rtl" ? "خطأ في الحساب" : "Account Error",
+        description:
+          dir === "rtl"
+            ? "لم يتم تحديد نوع الحساب (عميل/مورد/أدمن)، يرجى التواصل مع الدعم"
+            : "Account role is not set (client/supplier/admin). Please contact support.",
+        variant: "destructive",
+      });
+      setLoading(false);
+      await supabase.auth.signOut();
+      return;
+    }
+
+    if (!isActive) {
+      toast({
+        title: dir === "rtl" ? "حساب غير مفعل" : "Account Inactive",
+        description:
+          dir === "rtl"
+            ? "حسابك غير مفعل حالياً، يرجى التواصل مع الإدارة"
+            : "Your account is not active, please contact admin",
+        variant: "destructive",
+      });
+      setLoading(false);
+      await supabase.auth.signOut();
+      return;
+    }
+
+    // 3) توجيه حسب الدور لمسارات واضحة
+    let target = "/client-dashboard";
+
+    if (role === "admin") {
+      // لوحة الأدمن القديمة على /dashboard
+      target = "/dashboard";
+    } else if (role === "supplier") {
+      target = "/supplier-dashboard";
+    } else if (role === "client") {
+      target = "/client-dashboard";
     }
 
     toast({
@@ -64,20 +141,24 @@ export function LoginForm() {
       description: dir === "rtl" ? "مرحباً بك في حاوية" : "Welcome to Haawiya",
     });
 
-    router.push("/dashboard");
+    setLoading(false);
+    router.push(target);
   };
 
   const handlePasswordReset = async () => {
     if (!resetEmail) {
       toast({
         title: dir === "rtl" ? "خطأ" : "Error",
-        description: dir === "rtl" ? "يرجى إدخال البريد الإلكتروني" : "Please enter your email",
+        description:
+          dir === "rtl"
+            ? "يرجى إدخال البريد الإلكتروني"
+            : "Please enter your email",
         variant: "destructive",
       });
       return;
     }
 
-    // يمكنك هنا استدعاء دالة reset password لـ Supabase إذا فعلتها
+    // يمكن تفعيل reset password من Supabase لاحقاً
     toast({
       title: dir === "rtl" ? "تم إرسال الرابط" : "Link Sent",
       description:
@@ -93,7 +174,11 @@ export function LoginForm() {
     <>
       <Card className="w-full max-w-md mx-4 shadow-xl border-2">
         <div className="p-4 pb-0">
-          <Button variant="ghost" asChild className="w-full justify-start gap-2 hover:bg-primary/10">
+          <Button
+            variant="ghost"
+            asChild
+            className="w-full justify-start gap-2 hover:bg-primary/10"
+          >
             <Link href="/">
               {dir === "rtl" ? (
                 <>
@@ -116,13 +201,19 @@ export function LoginForm() {
                 <Package className="h-8 w-8 text-primary-foreground" />
               </div>
               <div>
-                <CardTitle className="text-2xl font-bold text-primary">{t.appName || "حاوية"}</CardTitle>
-                <p className="text-sm text-muted-foreground">{dir === "rtl" ? "منصة الجملة" : "Wholesale Platform"}</p>
+                <CardTitle className="text-2xl font-bold text-primary">
+                  {t.appName || "حاوية"}
+                </CardTitle>
+                <p className="text-sm text-muted-foreground">
+                  {dir === "rtl" ? "منصة الجملة" : "Wholesale Platform"}
+                </p>
               </div>
             </div>
             <LanguageToggle />
           </div>
-          <CardDescription className="text-base">{t.login || "تسجيل الدخول"}</CardDescription>
+          <CardDescription className="text-base">
+            {t.login || "تسجيل الدخول"}
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
@@ -131,7 +222,7 @@ export function LoginForm() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@haawiya.sa"
+                placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
@@ -155,7 +246,9 @@ export function LoginForm() {
                 <Checkbox
                   id="remember"
                   checked={rememberMe}
-                  onCheckedChange={(checked) => setRememberMe(checked as boolean)}
+                  onCheckedChange={(checked) =>
+                    setRememberMe(checked as boolean)
+                  }
                 />
                 <Label htmlFor="remember" className="text-sm cursor-pointer">
                   {t.rememberMe || "تذكرني"}
@@ -170,14 +263,23 @@ export function LoginForm() {
                 {t.forgotPassword || "نسيت كلمة المرور؟"}
               </Button>
             </div>
-            <Button type="submit" className="w-full h-11 text-base font-semibold" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full h-11 text-base font-semibold"
+              disabled={loading}
+            >
               {loading
-                ? dir === "rtl" ? "جارٍ التسجيل..." : "Logging in..."
+                ? dir === "rtl"
+                  ? "جارٍ التسجيل..."
+                  : "Logging in..."
                 : t.login || "تسجيل الدخول"}
             </Button>
             <p className="text-center text-sm text-muted-foreground">
               {dir === "rtl" ? "ليس لديك حساب؟" : "Don't have an account?"}{" "}
-              <Link href="/register" className="text-primary hover:underline font-medium">
+              <Link
+                href="/register"
+                className="text-primary hover:underline font-medium"
+              >
                 {dir === "rtl" ? "إنشاء حساب" : "Sign up"}
               </Link>
             </p>
@@ -189,7 +291,9 @@ export function LoginForm() {
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
           <Card className="w-full max-w-md">
             <CardHeader>
-              <CardTitle>{dir === "rtl" ? "إعادة تعيين كلمة المرور" : "Reset Password"}</CardTitle>
+              <CardTitle>
+                {dir === "rtl" ? "إعادة تعيين كلمة المرور" : "Reset Password"}
+              </CardTitle>
               <CardDescription>
                 {dir === "rtl"
                   ? "أدخل بريدك الإلكتروني لإرسال رابط إعادة التعيين"
@@ -204,14 +308,18 @@ export function LoginForm() {
                   type="email"
                   value={resetEmail}
                   onChange={(e) => setResetEmail(e.target.value)}
-                  placeholder="admin@haawiya.sa"
+                  placeholder="you@example.com"
                 />
               </div>
               <div className="flex gap-2">
                 <Button onClick={handlePasswordReset} className="flex-1">
                   {dir === "rtl" ? "إرسال" : "Send"}
                 </Button>
-                <Button variant="outline" onClick={() => setShowResetDialog(false)} className="flex-1">
+                <Button
+                  variant="outline"
+                  onClick={() => setShowResetDialog(false)}
+                  className="flex-1"
+                >
                   {t.cancel}
                 </Button>
               </div>
