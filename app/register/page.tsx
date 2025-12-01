@@ -1,16 +1,17 @@
-import { Suspense } from "react";
-import { RegisterForm } from "@/components/auth/register-form";
+import { redirect } from "next/navigation";
 
-// هذا السطر هو الحل الجذري: يجبر الصفحة أن تكون ديناميكية بالكامل
-// مما يمنع خطأ البناء المسبق (Prerender Error)
 export const dynamic = "force-dynamic";
 
 export default function RegisterPage() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-accent/10 py-8">
-      <Suspense fallback={<div className="p-4 text-center">جارٍ التحميل...</div>}>
-        <RegisterForm />
-      </Suspense>
-    </div>
-  );
+  // إما نحولهم مباشرة لتسجيل الدخول
+  redirect("/login");
+
+  // أو لو تبي تظهر رسالة بدل redirect، استخدم الكود التالي واحذف redirect:
+  // return (
+  //   <div className="min-h-screen flex items-center justify-center">
+  //     <p className="text-sm text-muted-foreground">
+  //       صفحة التسجيل غير متاحة حالياً، يرجى استخدام بيانات الدخول المرسلة لك.
+  //     </p>
+  //   </div>
+  // );
 }
